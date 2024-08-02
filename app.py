@@ -4,6 +4,7 @@ import base64
 import requests
 import os
 from PIL import Image
+from io import BytesIO
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,15 +13,14 @@ app = Flask(__name__)
 api_key = os.getenv("API_KEY")
 
 # Function to encode the image
-def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+def encode_image(image):
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 # Function to process image and extract Date of Birth
 def process_image(image):
-    image_path = 'temp_image.png'
-    image.save(image_path, 'PNG')
-    base64_image = encode_image(image_path)
+    base64_image = encode_image(image)
     
     headers = {
         "Content-Type": "application/json",
@@ -57,7 +57,6 @@ def home():
     return "Welcome to homepage"
 
 
-
 @app.route('/extract_dob', methods=["GET", 'POST'])
 def extract_dob():
     if 'file' in request.files:
@@ -67,29 +66,18 @@ def extract_dob():
             return jsonify({"error": "No selected file"}), 400
         
         file_type = file.content_type
-        temp_dir = 'temp'
 
         try:
             if file_type == 'application/pdf':
-                # Create temp directory if it doesn't exist
-                if not os.path.exists(temp_dir):
-                    os.makedirs(temp_dir)
-
-                # Save uploaded PDF to the temp directory
-                temp_pdf_path = os.path.join(temp_dir, file.filename)
-                file.save(temp_pdf_path)
-                
                 # Extract images from the uploaded PDF using PyMuPDF
-                doc = fitz.open(temp_pdf_path)
+                doc = fitz.open("pdf", file.read())
                 results = []
 
                 for page_num in range(len(doc)):
                     page = doc.load_page(page_num)
                     pix = page.get_pixmap()
-                    image_path = os.path.join(temp_dir, f'page_{page_num + 1}.png')
-                    pix.save(image_path)
                     
-                    image = Image.open(image_path)
+                    image = Image.open(BytesIO(pix.tobytes()))
                     extracted_text = process_image(image)
                     results.append({"page": page_num + 1, "text": extracted_text})
 
@@ -106,23 +94,13 @@ def extract_dob():
         except Exception as e:
             print(f"Error: {e}")
             return jsonify({"error": str(e)}), 500
-        finally:
-            # Clean up temp files
-            if os.path.exists(temp_dir):
-                for file in os.listdir(temp_dir):
-                    os.remove(os.path.join(temp_dir, file))
-                os.rmdir(temp_dir)
 
     elif 'image' in request.json:
         data = request.get_json()
         image_base64 = data['image']
         image_data = base64.b64decode(image_base64)
         
-        image_path = 'temp_image.png'
-        with open(image_path, 'wb') as image_file:
-            image_file.write(image_data)
-        
-        image = Image.open(image_path)
+        image = Image.open(BytesIO(image_data))
         extracted_text = process_image(image)
         response = {"response":extracted_text}
         
