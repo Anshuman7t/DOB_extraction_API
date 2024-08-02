@@ -35,7 +35,7 @@ def process_image(image):
                 "content": [
                     {
                         "type": "text",
-                        "text": "Extract only Date of Birth."
+                        "text": "Extract only Date of Birth. do not give any extra detail just reply date in given format dd/mm/yy"
                     },
                     {
                         "type": "image_url",
@@ -50,6 +50,13 @@ def process_image(image):
     
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
     return response.json()['choices'][0]['message']['content']
+
+
+@app.route("/", methods=["GET", "POST"] )
+def home():
+    return "Welcome to homepage"
+
+
 
 @app.route('/extract_dob', methods=['POST'])
 def extract_dob():
@@ -117,8 +124,9 @@ def extract_dob():
         
         image = Image.open(image_path)
         extracted_text = process_image(image)
+        response = {"response":extracted_text}
         
-        return jsonify({"extracted_text": extracted_text}), 200
+        return jsonify({"extracted_text": response}), 200
 
     else:
         return jsonify({"error": "No file part or image data"}), 400
