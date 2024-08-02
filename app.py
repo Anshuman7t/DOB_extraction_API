@@ -58,7 +58,7 @@ def home():
 
 
 
-@app.route('/extract_dob', methods=['POST'])
+@app.route('/extract_dob', methods=["GET", 'POST'])
 def extract_dob():
     if 'file' in request.files:
         file = request.files['file']
