@@ -35,7 +35,7 @@ def process_image(image):
                 "content": [
                     {
                         "type": "text",
-                        "text": "Extract only Date of Birth. do not give any extra detail just reply date in given format dd/mm/yy"
+                        "text": "Extract only Date of Birth. do not give any extra detail just reply date in given format { dd/mm/yy } you need to give response in this format only do not add any other details or any other thing."
                     },
                     {
                         "type": "image_url",
@@ -79,22 +79,22 @@ def extract_dob():
                     
                     image = Image.open(BytesIO(pix.tobytes()))
                     extracted_text = process_image(image)
-                    results.append({"page": page_num + 1, "text": extracted_text})
+                    results.append(extracted_text)
 
-                return jsonify({"extracted_texts": results}), 200
+                return jsonify(results), 200
 
             elif file_type in ['image/png', 'image/jpeg']:
                 image = Image.open(file.stream)
                 extracted_text = process_image(image)
                 
-                return jsonify({"extracted_text": extracted_text}), 200
+                return jsonify(extracted_text), 200
             
             else:
                 return jsonify({"error": "Unsupported file type"}), 400
         except Exception as e:
             print(f"Error: {e}")
             return jsonify({"error": str(e)}), 500
-
+ 
     elif 'image' in request.json:
         data = request.get_json()
         image_base64 = data['image']
@@ -102,9 +102,9 @@ def extract_dob():
         
         image = Image.open(BytesIO(image_data))
         extracted_text = process_image(image)
-        response = {"response":extracted_text}
+        response = (extracted_text)
         
-        return jsonify({"extracted_text": response}), 200
+        return jsonify(response), 200
 
     else:
         return jsonify({"error": "No file part or image data"}), 400
